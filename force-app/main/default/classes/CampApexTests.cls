@@ -23,8 +23,8 @@ public class CampApexTests {
 
   private static void assertCodeBodyBulk(String codeBody, 
     Map<String, String> searchStringToError) {
-    codeBody = codeBody.deleteWhitespace();
 
+    codeBody = codeBody.deleteWhitespace();
     for (String searchString : searchStringToError.keySet()) {
       if (!codeBody.containsIgnoreCase(searchString)) {
         throw new CampApexTestException(searchStringToError.get(searchString));
