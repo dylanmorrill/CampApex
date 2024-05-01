@@ -8,6 +8,25 @@ public class CampApexTests {
     });
   }
 
+  public static void triggerContextVariables() {
+    Savepoint sp = Database.setSavepoint(); 
+    Publisher__c p = [SELECT Id
+                      FROM Publisher__c
+                      LIMIT 1];
+    
+    //Confirm code not hit when AverageRating__c has not changed
+    Utils.confirmer = Utils.createConfirmer('triggerContextVariables');
+    update p;
+    Assert.isFalse(Utils.confirmer.isConfirmed());
+
+    //Confirm code is hit when AverageRating__c has changed
+    Utils.confirmer.clearConfirmation();
+    p.AverageRating__c = Math.random() * 10000;
+    update p;
+    Assert.isTrue(Utils.confirmer.isConfirmed());
+    Database.rollback(sp);
+  }
+
   private static ApexTrigger assertTriggerExists(String triggerName) {
     String errorMessageBase = 
       'Cannot find an Apex Trigger named "{0}"';
@@ -23,8 +42,8 @@ public class CampApexTests {
 
   private static void assertCodeBodyBulk(String codeBody, 
     Map<String, String> searchStringToError) {
-
     codeBody = codeBody.deleteWhitespace();
+
     for (String searchString : searchStringToError.keySet()) {
       if (!codeBody.containsIgnoreCase(searchString)) {
         throw new CampApexTestException(searchStringToError.get(searchString));
