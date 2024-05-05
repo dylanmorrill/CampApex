@@ -4,5 +4,9 @@
         <members>CampApexTests</members>
         <name>ApexClass</name>
     </types>
+    <types>
+        <members>BookTrigger</members>
+        <name>ApexTrigger</name>
+    </types>
     <version>59.0</version>
 </Package>
