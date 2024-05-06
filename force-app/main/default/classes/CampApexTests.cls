@@ -81,7 +81,7 @@ public class CampApexTests {
     confirmer = null;
   }
 
-  private static void assertCodeBodyBulk(String codeBody, 
+  private void assertCodeBodyBulk(String codeBody, 
     Map<String, String> searchStringToError) {
     codeBody = codeBody.deleteWhitespace();
 
@@ -91,7 +91,7 @@ public class CampApexTests {
     }
   }
 
-  private static ApexTrigger assertTriggerExists(String triggerName) {
+  private ApexTrigger assertTriggerExists(String triggerName) {
     String errorMessageBase = 
       'Cannot find an Apex Trigger named "{0}"';
       List<ApexTrigger> foundTrigger = [SELECT Id, Body
