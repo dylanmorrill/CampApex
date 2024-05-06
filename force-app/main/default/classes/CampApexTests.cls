@@ -69,7 +69,6 @@ public class CampApexTests {
   }
 
   public void whatIsATrigger() {
-    
     ApexTrigger bookTrigger = assertTriggerExists('BookTrigger');
     assertCodeBodyBulk(bookTrigger.Body, new Map<String, String> { 
         'stringhelloWorld=\'campapex\'' => '"BookTrigger" exists, but it ' +
