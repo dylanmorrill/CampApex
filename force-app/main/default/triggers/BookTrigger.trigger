@@ -1,18 +1,22 @@
 trigger BookTrigger on Book__c (before update) {
-  Book__c newRecord = Trigger.new[0];
-	Book__c oldRecord = Trigger.oldMap.get(newRecord.Id);
-    
-  Boolean hasTitleChanged = newRecord.Title__c != oldRecord.Title__c;
-  Boolean hasRatingChanged = newRecord.Rating__c != oldRecord.Rating__c;
-  Boolean haveBothFieldsChanged = hasTitleChanged && hasRatingChanged;
+  Set<Id> publishereIds = new Set<Id>();
+  for (Book__c o : Trigger.new) {
+    if (o.Publisher__c != null) {
+      publishereIds.add(o.Publisher__c);
+    }
+  }
+  If (publishereIds.isEmpty()) {
+    return;
+  }
+  Map<Id, Publisher__c> objectThreeMap = new Map<Id, Publisher__c>
+    ([SELECT Id, Name
+      FROM Publisher__c
+      WHERE Id in :publishereIds]);
   
-  if (haveBothFieldsChanged) {
-      System.debug('Both fields have changed');
-  } else if (hasTitleChanged) {
-      System.debug('Title__c has changed');
-  } else if (hasRatingChanged) {
-      System.debug('Rating__c has changed');
-  } else {
-      System.debug('Neither field has changed');
+  for (Book__c o : Trigger.new) {
+    if (o.Publisher__c != null) {
+      System.debug('For Book__c "' + o.Name + '", the parent Publisher__c is "' + 
+        objectThreeMap.get(o.Publisher__c).Name + '"');
+    }
   }
 }

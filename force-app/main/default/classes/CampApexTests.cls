@@ -5,8 +5,52 @@ public class CampApexTests {
     confirmer = new ChallangeConfirmation();
   }
 
+  public void bulkificationExecutionContext() {
+    System.Savepoint sp = Database.setSavepoint();
+    assertTriggerExists('PublicationTrigger');
+    Set<String> bookNames = new Set<String> {
+      'To Kill a Mockingbird', '1984', 'The Great Gatsby',
+      'Pride and Prejudice', 'The Catcher in the Rye', 'The Hobbit',
+      'The Lord of the Rings', 'Brave New World', 'Animal Farm',
+      'The Chronicles of Narnia', 'The Da Vinci Code',
+      'Harry Potter and the Sorcerer\'s Stone', 'The Hunger Games',
+      'The Alchemist', 'Lord of the Flies', 'The Kite Runner',
+      'The Catcher in the Rye', 'To Kill a Mockingbird',
+      'Harry Potter and the Chamber of Secrets',
+      'Harry Potter and the Prisoner of Azkaban',
+      'Harry Potter and the Goblet of Fire',
+      'Harry Potter and the Order of the Phoenix',
+      'Harry Potter and the Half-Blood Prince',
+      'Harry Potter and the Deathly Hallows', 'The Great Gatsby',
+      'Fahrenheit 451', 'The Book Thief', 'The Hobbit', 'The Lord of the Rings',
+      'The Hunger Games', 'Twilight', 'The Fault in Our Stars',
+      'The Girl with the Dragon Tattoo', 'Gone with the Wind',
+      'The Help', 'The Hitchhiker\'s Guide to the'};
+    List<Book__c> booksToInsert = new List<Book__c>();
+    List<Publication__c> publicationsToInsert = new List<Publication__c>();
+    for (String bookName : bookNames) {
+      booksToInsert.add(new Book__C(Name = bookName));
+    }
+    insert booksToInsert;
+    for (Book__c b : booksToInsert) {
+      publicationsToInsert.add(new Publication__c(Book__c = b.Id));
+    }
+    insert publicationsToInsert;
+    update publicationsToInsert;
+    Assert.isTrue(!confirmer.logStrings.isEmpty(), 
+      'You did not confirm any book names - please review your code');
+    Assert.isTrue(confirmer.logStrings.containsAll(bookNames), 
+      'Some book names were confirmed but not all - please review your code');
+    Assert.isTrue(Limits.getQueries() < 5, 'You used ' + 
+      Limits.getQueries() + ' queries, but must only use one to complete ' +
+      'this challange');
+    System.debug(JSON.serializePretty(confirmer));
+    Database.rollback(sp);
+  }
+
   public void triggerContextVariables() {
     System.Savepoint sp = Database.setSavepoint();
+    assertTriggerExists('PublisherTrigger');
     Publisher__c p = [SELECT Id
                       FROM Publisher__c
                       LIMIT 1];
@@ -25,6 +69,7 @@ public class CampApexTests {
   }
 
   public void whatIsATrigger() {
+    
     ApexTrigger bookTrigger = assertTriggerExists('BookTrigger');
     assertCodeBodyBulk(bookTrigger.Body, new Map<String, String> { 
         'stringhelloWorld=\'campapex\'' => '"BookTrigger" exists, but it ' +
