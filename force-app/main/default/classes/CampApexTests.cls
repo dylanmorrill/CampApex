@@ -5,7 +5,7 @@ public class CampApexTests {
     confirmer = new ChallangeConfirmation();
   }
 
-  public void bulkificationExecutionContext() {
+  public void performTestBulkificationExecutionContext() {
     System.Savepoint sp = Database.setSavepoint();
     assertTriggerExists('PublicationTrigger');
     Set<String> bookNames = new Set<String> {
@@ -48,7 +48,63 @@ public class CampApexTests {
     Database.rollback(sp);
   }
 
-  public void triggerContextVariables() {
+  public void performTestOrderExecutionTriggerHandlers() {
+    String publisherTriggerBody = assertTriggerExists('PublisherTrigger').Body;
+    String publisherHandlerBody = 
+      assertApexClassExists('PublisherTriggerHandler').Body;
+    String publicationTriggerBody = 
+      assertTriggerExists('PublicationTrigger').Body;
+    String publicationHandlerBody =
+      assertApexClassExists('PublicationTriggerHandler').Body;
+    assertCodeBodyBulk(publisherTriggerBody, new Map<String, String> { 
+        'newPublisherTriggerHandler().execute();' => 'Cannot find code ' +
+          'that creates a new PublisherTriggerHandler object and calls its ' +
+          'execute method'
+    });
+    assertCodeBodyBulk(publisherHandlerBody, new Map<String, String> { 
+      'switchonTrigger.OperationType' => 'Cannot find switch statement for ' +
+        'Trigger.OperationType',
+      'whenBEFORE_INSERT{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the BEFORE_INSERT operation',
+      'whenBEFORE_UPDATE{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the BEFORE_UPDATE operation',
+      'whenBEFORE_DELETE{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the BEFORE_DELETE operation',
+      'whenAFTER_INSERT{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the AFTER_INSERT operation',
+      'whenAFTER_UPDATE{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the AFTER_UPDATE operation',
+      'whenAFTER_DELETE{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the AFTER_DELETE operation',
+      'whenAFTER_UNDELETE{' => 'The switch statement in the ' +
+        'PublisherTriggerHandler is missing the AFTER_UNDELETE operation'
+    });
+    assertCodeBodyBulk(publicationTriggerBody, new Map<String, String> { 
+      'newPublicationTriggerHandler().execute();' => 'Cannot find code ' +
+        'that creates a new PublicationTriggerHandler object and calls its ' +
+        'execute method'
+    });
+    assertCodeBodyBulk(publicationHandlerBody, new Map<String, String> { 
+      'switchonTrigger.OperationType' => 'Cannot find switch statement for ' +
+        'Trigger.OperationType',
+      'whenBEFORE_INSERT{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the BEFORE_INSERT operation',
+      'whenBEFORE_UPDATE{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the BEFORE_UPDATE operation',
+      'whenBEFORE_DELETE{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the BEFORE_DELETE operation',
+      'whenAFTER_INSERT{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the AFTER_INSERT operation',
+      'whenAFTER_UPDATE{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the AFTER_UPDATE operation',
+      'whenAFTER_DELETE{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the AFTER_DELETE operation',
+      'whenAFTER_UNDELETE{' => 'The switch statement in the ' +
+        'PublicationTriggerHandler is missing the AFTER_UNDELETE operation'
+    });
+  }
+
+  public void performTestTriggerContextVariables() {
     System.Savepoint sp = Database.setSavepoint();
     assertTriggerExists('PublisherTrigger');
     Publisher__c p = [SELECT Id
@@ -68,17 +124,26 @@ public class CampApexTests {
     Database.rollback(sp);
   }
 
-  public void whatIsATrigger() {
-    ApexTrigger bookTrigger = assertTriggerExists('BookTrigger');
-    assertCodeBodyBulk(bookTrigger.Body, new Map<String, String> { 
-        'stringhelloWorld=\'campapex\'' => '"BookTrigger" exists, but it ' +
+  public void performTestWhatIsATrigger() {
+    String bookTriggerBody = assertTriggerExists('BookTrigger').Body;
+    assertCodeBodyBulk(bookTriggerBody, new Map<String, String> { 
+        'StringHelloWorld=\'CampApex\'' => '"BookTrigger" exists, but it ' +
           'does not contain a String named "helloWord" with a value of ' +
           '"Camp Apex"'
     });
   }
 
-  private void clearConfirmer() {
-    confirmer = null;
+  private ApexClass assertApexClassExists(String apexClassName) {
+    String errorMessageBase = 
+      'Cannot find an Apex Class named "{0}"';
+      List<ApexClass> foundApexClass = [SELECT Id, Body
+                                      FROM ApexClass
+                                      WHERE Name = :apexClassName];
+      if (foundApexClass.isEmpty()) {
+        throw new CampApexTestException(String.format(errorMessageBase, 
+          new List<String> { apexClassName }));
+      }
+      return foundApexClass[0];
   }
 
   private void assertCodeBodyBulk(String codeBody, 
@@ -102,6 +167,10 @@ public class CampApexTests {
           new List<String> { triggerName }));
       }
       return foundTrigger[0];
+  }
+
+  private void clearConfirmer() {
+    confirmer = null;
   }
 
   public static void confirmChallange() {
