@@ -1,3 +1,3 @@
-trigger BookTrigger on Book__c (before update, after update) {
+trigger BookTrigger on Book__c (before insert, before update, before delete) {
   new BookTriggerHandler().execute();
 }

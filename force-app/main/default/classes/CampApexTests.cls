@@ -5,6 +5,91 @@ public class CampApexTests {
     confirmer = new ChallangeConfirmation();
   }
 
+  public void performTestBeforeTriggers() {
+    System.Savepoint sp = Database.setSavepoint();
+    List<Author__c> authors = new List<Author__c> {
+      new Author__c(Name = 'JK Rowling', Biography__c = 'test'),
+      new Author__c(Name = 'Michael Lewis'),
+      new Author__c(Name = 'Dan Appleman', Biography__c = 'test')
+    };
+    insert authors;
+    authors = [SELECT Id, Name, BiographyLastUpdated__c
+               FROM Author__c
+               WHERE Id IN :authors];
+    for (Author__c a : authors) {
+      switch on a.Name {
+        when 'Michael Lewis' {
+          Assert.isNull(a.BiographyLastUpdated__c, 'Issue with insert ' +
+            'trigger: Biography__c is null but BiographyLastUpdated__c was ' +
+            'still populated');
+        } when else {
+          Assert.areEqual(Date.today(), a.BiographyLastUpdated__c,
+            'Issue with insert trigger: Biography__c is populated but ' +
+            'BiographyLastUpdated__c was not populated');
+        }
+      }
+    }
+    for (Author__c a : authors) {
+      a.Biography__c = 'test1';
+      a.BiographyLastUpdated__c = null;
+    }
+    update authors;
+    authors = [SELECT Id, Name, BiographyLastUpdated__c
+               FROM Author__c
+               WHERE Id IN :authors];
+    for (Author__c a : authors) {
+      Assert.areEqual(Date.today(), a.BiographyLastUpdated__c,
+        'Issue with update trigger: Biography__c is populated but' +
+        'BiographyLastUpdated__c was not ' +
+        'populated');
+    }
+    List<Book__c> books = new List<Book__c>();
+    for (Integer i=0; i<20; i++) {
+      books.add(new Book__c());
+    }
+    insert books;
+    List<Publication__c> publications = new List<Publication__c>();
+    Integer j = 0;
+    for (Book__c b : books) {
+      publications.add(new Publication__c(Book__c = b.Id, 
+        Author__c = authors[Math.mod(j, 2)].Id));
+      j++;
+    }
+    insert publications;
+    try {
+      delete authors;
+    } catch (DmlException e) {
+      Assert.areEqual(2, e.getNumDml(), 'Issue with delete trigger: ' +
+        'expected 2 of 3 records to be blocked from deletion. Actual number ' +
+        'blocked: ' + e.getNumDml());
+      for (Integer i=0; i<2; i++) {
+        Assert.areEqual(e.getDmlMessage(i), 
+          'Authors with Publications cannot be deleted',
+          'Issue with delete trigger: an error was thrown but the message was "' +
+          e.getDmlMessage(i) + '" not "Authors with Publications cannot be ' +
+          'deleted"');
+      }
+    }
+    Integer currentQueries = Limits.getQueries();
+    try {
+      delete authors[2];
+    } catch (Exception e) {
+      String exceptionMessage = e.getDmlMessage(0);
+      Boolean isTestedException 
+        = exceptionMessage == 'Authors with Publications cannot be deleted';
+      Assert.fail('Issue with delete trigger: '+
+        'Tried to delete an Author without any Books but was ' +
+        'blocked by ' + (isTestedException ? 'your trigger' : 
+          'this error: ' + e.getDmlMessage(0)));
+    }
+    currentQueries -= Limits.getQueries();
+    if (currentQueries > 0) {
+      Assert.areEqual(1, Limits.getQueries() - currentQueries, 
+        'You used more than one query');
+    }
+    Database.rollback(sp);
+  }
+
   public void performTestBulkificationExecutionContext() {
     System.Savepoint sp = Database.setSavepoint();
     assertTriggerExists('PublicationTrigger');
@@ -44,7 +129,6 @@ public class CampApexTests {
     Assert.isTrue(Limits.getQueries() < 5, 'You used ' + 
       Limits.getQueries() + ' queries, but must only use one to complete ' +
       'this challange');
-    System.debug(JSON.serializePretty(confirmer));
     Database.rollback(sp);
   }
 
